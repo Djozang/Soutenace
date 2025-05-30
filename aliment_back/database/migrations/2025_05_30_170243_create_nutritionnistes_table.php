@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('patients', function (Blueprint $table) {
+        Schema::create('nutritionnistes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->enum('état_santé', ['sain', 'malade'])->nullable();
-            $table->string('maladie', 255)->nullable();
+            $table->string('spécialité', 255)->nullable(); // Spécialité du nutritionniste
             $table->timestamps();
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('patients');
+        Schema::dropIfExists('nutritionnistes');
     }
 };

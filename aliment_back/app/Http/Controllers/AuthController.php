@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Patient;
 use App\Models\Admin;
+use App\Models\Nutritionniste;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -20,9 +21,12 @@ class AuthController extends Controller
             'nom' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
-            'role' => 'required|in:patient,admin',
+            'role' => 'required|in:patient,admin,nutritionniste',
+            // Validation conditionnelle pour les patients
             'état_santé' => 'nullable|required_if:role,patient|in:sain,malade',
-            'maladie' => 'nullable|required_if:état_santé,malade|string|max:255'
+            'maladie' => 'nullable|required_if:état_santé,malade|string|max:255',
+            // Validation conditionnelle pour les nutritionnistes
+             'spécialité' => 'nullable|required_if:role,nutritionniste|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -48,6 +52,11 @@ class AuthController extends Controller
                 ]);
             } elseif ($request->role === 'admin') {
                 Admin::create(['user_id' => $user->id]);
+            }elseif ($request->role === 'nutritionniste') {
+                Nutritionniste::create(['user_id' => $user->id,
+                    'spécialité' => $request->spécialité,
+                ]);
+
             }
 
             // Création automatique du token après inscription
@@ -132,4 +141,52 @@ class AuthController extends Controller
             ], 500);
         }
     }
+       public function getUserWithProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+
+        $profile = null;
+        $profileType = null;
+
+        switch ($user->role) {
+            case 'patient':
+                $profile = patient::where('user_id', $user->id)->first();
+                $profileType = 'patient';
+                break;
+            case 'nutritionniste':
+                $profile = Nutritionniste::where('user_id', $user->id)->first();
+                $profileType = 'nutritionniste';
+                break;
+            case 'admin':
+                $profile = Admin::where('user_id', $user->id)->first();
+                $profileType = 'admin';
+                break;
+            default:
+                return response()->json([
+                    'message' => 'Rôle utilisateur invalide'
+                ], 400);
+        }
+
+        // Vérification que le profil existe pour le rôle
+        if (!$profile) {
+            return response()->json([
+                'message' => 'Profil utilisateur introuvable pour ce rôle',
+                'user' => $user,
+                'profile_type' => $profileType
+            ], 404);
+        }
+
+        return response()->json([
+            'user' => $user,
+            'profile' => $profile,
+            'profile_type' => $profileType
+        ]);
+    }
+        
 }

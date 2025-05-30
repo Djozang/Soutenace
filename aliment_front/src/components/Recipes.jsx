@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useAuth } from '../Contexts/AuthContext';
 import { HeartIcon } from '@heroicons/react/24/solid';
+import Api from '../services/Api';
 
 const Recipes = () => {
   const { user } = useAuth();
@@ -24,7 +24,7 @@ const Recipes = () => {
   const fetchRecipes = async () => {
     try {
       setLoading(prev => ({ ...prev, recipes: true }));
-      const res = await axios.get('http://localhost:8000/api/recuperer/recette');
+      const res = await Api.get('/api/recuperer/recette');
       console.log('Recettes récupérées:', res.data);
       
       // Adapter selon la structure de votre API
@@ -42,7 +42,7 @@ const Recipes = () => {
   const fetchMeals = async () => {
     try {
       setLoading(prev => ({ ...prev, meals: true }));
-      const res = await axios.get('http://localhost:8000/api/recuperer/repas');
+      const res = await Api.get('/api/recuperer/repas');
       console.log('Repas récupérés:', res.data);
       
       // Adapter selon la structure de votre API (comme dans votre autre composant)
@@ -98,7 +98,7 @@ const Recipes = () => {
 
       console.log('Données envoyées:', requestData);
       
-      await axios.post('http://localhost:8000/api/ajouter/recette', requestData);
+      await Api.post('/api/ajouter/recette', requestData);
       
       // Réinitialiser le formulaire
       setFormData({
@@ -126,7 +126,7 @@ const Recipes = () => {
 
   const handleLike = async (recipeId) => {
     try {
-      await axios.post(`http://localhost:8000/api/recipes/${recipeId}/like`);
+      await Api.post(`/api/recipes/${recipeId}/like`);
       await fetchRecipes();
     } catch (err) {
       setError('Erreur lors du like');
@@ -138,7 +138,7 @@ const Recipes = () => {
     if (!comment.trim()) return;
     
     try {
-      await axios.post(`http://localhost:8000/api/recipes/${recipeId}/comment`, { 
+      await Api.post(`/api/recipes/${recipeId}/comment`, { 
         comment: comment.trim() 
       });
       await fetchRecipes();
@@ -162,7 +162,7 @@ const Recipes = () => {
 
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto mt-16">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Communauté des recettes</h2>
         
         {error && (

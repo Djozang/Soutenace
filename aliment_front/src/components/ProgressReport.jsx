@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import Api from '../services/Api';
 import { useAuth } from '../Contexts/AuthContext';
 
 const ProgressReport = () => {
@@ -13,7 +13,7 @@ const ProgressReport = () => {
     const fetchReport = async () => {
       setLoading(true);
       try {
-        const res = await axios.get('http://localhost:8000/api/health-progress');
+        const res = await Api.get('/api/health-progress');
         setReport(res.data);
       } catch (err) {
         console.error('Failed to fetch progress report', err);

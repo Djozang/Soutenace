@@ -1,144 +1,253 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import axios from 'axios';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import Api from "../services/Api";
 
-const AuthContext = createContext(null);
-
-// Instance Axios configurée pour l'API
-const api = axios.create({
-  baseURL: 'http://localhost:8000',
-  withCredentials: true, // Essentiel pour les cookies
-});
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState({
-    init: true,       // Chargement initial
-    action: false     // Chargement pendant les actions
+  const [authState, setAuthState] = useState({
+    user: null,
+    profile: null,
+    profileType: null,
+    loading: true,
+    error: null,
   });
-  const [error, setError] = useState(null);
 
-  // Intercepteur pour gérer les erreurs globales
-  useEffect(() => {
-    const responseInterceptor = api.interceptors.response.use(
-      response => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          await logout();
+  // Déclarez d'abord logout avec useCallback
+  const logout = useCallback(async () => {
+    try {
+      await Api.post("/api/logout");
+    } catch (error) {
+      console.warn("Erreur lors de la déconnexion API:", error);
+    } finally {
+      localStorage.removeItem("auth_token");
+      delete Api.defaults.headers.common["Authorization"];
+      setAuthState({
+        user: null,
+        profile: null,
+        profileType: null,
+        loading: false,
+        error: null,
+      });
+    }
+  }, []);
+
+  // Ensuite déclarez loadUserData qui utilise logout
+  const loadUserData = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setAuthState((prev) => ({ ...prev, loading: false }));
+        return;
+      }
+
+      const response = await Api.get("/api/user-with-profile");
+
+      if (response.data.message) {
+        if (response.status === 401) {
+          throw new Error("Non autorisé");
         }
-        return Promise.reject(error);
+        if (response.status === 404) {
+          throw new Error("Profil utilisateur introuvable");
+        }
+        throw new Error(response.data.message);
       }
-    );
 
-    return () => {
-      api.interceptors.response.eject(responseInterceptor);
-    };
-  }, []);
+      if (!response.data.user || !response.data.profile_type) {
+        throw new Error("Données utilisateur incomplètes");
+      }
 
-  // Fonction pour obtenir le token CSRF
-  const ensureCsrfToken = async () => {
-    try {
-      await api.get('/sanctum/csrf-cookie');
+      setAuthState({
+        user: response.data.user,
+        profile: response.data.profile,
+        profileType: response.data.profile_type,
+        loading: false,
+        error: null,
+      });
     } catch (error) {
-      console.error('CSRF Token Error:', error);
-      throw error;
+      console.error("Erreur de chargement utilisateur:", error);
+      if (
+        error.response?.status === 401 ||
+        error.message.includes("Non autorisé")
+      ) {
+        logout();
+      } else {
+        setAuthState((prev) => ({
+          ...prev,
+          loading: false,
+          error: error.message,
+        }));
+      }
     }
-  };
+  }, [logout]);
 
-  // Initialisation de l'authentification
-  useEffect(() => {
-    const initializeAuth = async () => {
+  // Login function
+  const login = useCallback(
+    async (email, password) => {
       try {
-        await ensureCsrfToken();
-        const { data } = await api.get('/api/user');
-        setUser(data);
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setLoading(prev => ({ ...prev, init: false }));
-      }
-    };
+        setAuthState((prev) => ({ ...prev, loading: true, error: null }));
+        await Api.get("/sanctum/csrf-cookie");
 
-    initializeAuth();
+        const response = await Api.post("/api/login", { email, password });
+
+        if (!response.data?.token) {
+          throw new Error("Token non reçu dans la réponse");
+        }
+
+        localStorage.setItem("auth_token", response.data.token);
+        Api.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${response.data.token}`;
+
+        await loadUserData();
+
+        return { success: true };
+      } catch (error) {
+        console.error("Erreur de connexion:", error);
+        let errorMessage = "Erreur de connexion";
+        if (error.response) {
+          errorMessage =
+            error.response.data?.message ||
+            error.response.data?.error ||
+            "Identifiants incorrects";
+        }
+
+        setAuthState((prev) => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }));
+
+        return {
+          success: false,
+          message: errorMessage,
+          errors: error.response?.data?.errors,
+        };
+      }
+    },
+    [loadUserData]
+  );
+
+  // Register function avec gestion de la validation email
+  const register = useCallback(
+    async (userData) => {
+      try {
+        setAuthState((prev) => ({ ...prev, loading: true, error: null }));
+        await Api.get("/sanctum/csrf-cookie");
+        const response = await Api.post("/api/register", userData);
+
+        console.log("Réponse d'inscription:", response.data);
+
+        // Cas 1: Inscription réussie avec token (clients - connexion automatique)
+        if (response.data?.token) {
+          localStorage.setItem("auth_token", response.data.token);
+          Api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+          await loadUserData();
+          return { 
+            success: true,
+            autoLogin: true
+          };
+        }
+        
+        // Cas 2: Inscription réussie sans token (entreprises - validation email requise)
+        // else if (response.data?.success || response.status === 201 || response.status === 200) {
+        //   setAuthState((prev) => ({ ...prev, loading: false }));
+        //   return { 
+        //     success: true, 
+        //     message: response.data?.message || "Inscription réussie",
+        //     requiresEmailValidation: true,
+        //     userType: response.data?.role || 'entreprise'
+        //   };
+        // }
+
+        // Cas 3: Structure de réponse inattendue
+        // console.error("Structure de réponse inattendue:", response.data);
+        // throw new Error("Réponse d'inscription incomplète");
+        
+      } catch (error) {
+        console.error("Erreur d'inscription:", error);
+        const errorMessage =
+          error.response?.data?.message || "Erreur lors de l'inscription";
+
+        setAuthState((prev) => ({
+          ...prev,
+          loading: false,
+          error: errorMessage,
+        }));
+
+        return {
+          success: false,
+          message: errorMessage,
+          errors: error.response?.data?.errors,
+        };
+      }
+    },
+    [loadUserData]
+  );
+
+  // Fonction pour renvoyer l'email de validation
+  const resendValidationEmail = useCallback(async (email) => {
+    try {
+      await Api.get("/sanctum/csrf-cookie");
+      const response = await Api.post("/api/resend-validation-email", { email });
+      
+      return {
+        success: true,
+        message: response.data?.message || "Email de validation renvoyé"
+      };
+    } catch (error) {
+      console.error("Erreur renvoi email:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Erreur lors du renvoi de l'email"
+      };
+    }
   }, []);
 
-  const login = async (credentials) => {
+  // Fonction pour vérifier le token de validation email
+  const validateEmail = useCallback(async (token) => {
     try {
-      setLoading(prev => ({ ...prev, action: true }));
+      await Api.get("/sanctum/csrf-cookie");
+      const response = await Api.post("/api/validate-email", { token });
       
-      // Étape cruciale - Obtenir le cookie CSRF avant le login
-      await ensureCsrfToken();
-      
-      const response = await api.post('/api/login', credentials);
-      
-      // Après login, vérifiez l'utilisateur
-      const userResponse = await api.get('/api/user');
-      setUser(userResponse.data);
-      
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('Login Error:', error.response?.data);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Login failed' 
+      return {
+        success: true,
+        message: response.data?.message || "Email validé avec succès"
       };
-    } finally {
-      setLoading(prev => ({ ...prev, action: false }));
-    }
-  };
-
-  const register = async (userData) => {
-    try {
-      setLoading(prev => ({ ...prev, action: true }));
-      setError(null);
-      
-      // 1. Obtenir le token CSRF
-      await getCsrfToken();
-      
-      // 2. Faire la requête d'inscription
-      const response = await api.post('/api/register', userData);
-      
-      // 3. Récupérer les infos utilisateur
-      const userResponse = await api.get('/api/user');
-      setUser(userResponse.data);
-      
-      return { success: true, data: response.data };
     } catch (error) {
-      const errorData = error.response?.data?.errors || 
-                       { message: error.response?.data?.message || 'Échec de l\'inscription' };
-      setError(errorData);
-      return { success: false, error: errorData };
-    } finally {
-      setLoading(prev => ({ ...prev, action: false }));
+      console.error("Erreur validation email:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Token de validation invalide"
+      };
     }
-  };
+  }, []);
 
-  const logout = async () => {
-    try {
-      setLoading(prev => ({ ...prev, action: true }));
-      await api.post('/api/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      setError(null);
-      setLoading(prev => ({ ...prev, action: false }));
-    }
-  };
+  // Chargement initial
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
 
-  const value = {
-    user,
-    loading,
-    error,
+  const contextValue = {
+    ...authState,
+ 
     login,
     register,
     logout,
-    isAuthenticated: !!user,
-    clearError: () => setError(null)
+    resendValidationEmail,
+    validateEmail,
+    isAuthenticated: !!authState.user,
+    refetchUser: loadUserData,
   };
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading.init && children}
+    <AuthContext.Provider value={contextValue}>
+      {!authState.loading && children}
     </AuthContext.Provider>
   );
 };
@@ -146,7 +255,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

@@ -12,6 +12,7 @@ use App\Http\Controllers\RepasController;
 use App\Http\Controllers\HealthProgress;
 use App\Http\Controllers\PlannificationController;
 use App\Http\Controllers\HealthConditionController;
+use Illuminate\Http\Request;
 
 
 use Illuminate\Support\Facades\Route;
@@ -20,7 +21,12 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', [AuthController::class, 'user']);
+      Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+    Route::get('/user-with-profile', [AuthController::class, 'getUserWithProfile']);
+
     Route::get('/meals', [MealController::class, 'index']);
     Route::apiResource('meal-plans', MealPlanController::class)->only(['index', 'store']);
     Route::apiResource('health-parameters', HealthParameterController::class)->only(['index', 'store']);

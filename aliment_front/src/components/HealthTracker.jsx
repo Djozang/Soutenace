@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import Api from '../services/Api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../Contexts/AuthContext';
 
@@ -21,7 +21,7 @@ const HealthTracker = () => {
     const fetchHealthData = async () => {
       setLoading(true);
       try {
-        const res = await axios.get('http://localhost:8000/api/health-parameters', {
+        const res = await Api.get('/api/health-parameters', {
           params: { range: timeRange }
         });
         setHealthData(res.data);
@@ -38,8 +38,8 @@ const HealthTracker = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8000/api/health-parameters', formData);
-      const res = await axios.get('http://localhost:8000/api/health-parameters');
+      await Api.post('/api/health-parameters', formData);
+      const res = await Api.get('/api/health-parameters');
       setHealthData(res.data);
       setFormData({
         poids: '',
@@ -56,7 +56,7 @@ const HealthTracker = () => {
 
   return (
     <div className="p-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto mt-16">
         <h2 className="text-2xl font-bold mb-6">Suivi de votre santé</h2>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

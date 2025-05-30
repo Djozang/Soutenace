@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import Api from '../services/Api';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -41,7 +41,7 @@ const MealPlanner = () => {
   const fetchMeals = async () => {
     try {
       setLoading(prev => ({ ...prev, meals: true }));
-      const res = await axios.get('http://localhost:8000/api/recuperer/repas');
+      const res = await Api.get('/api/recuperer/repas');
       
       let mealsData;
       if (res.data.repas && Array.isArray(res.data.repas)) {
@@ -67,7 +67,7 @@ const MealPlanner = () => {
   const fetchMealPlans = async () => {
     try {
       setLoading(prev => ({ ...prev, plans: true }));
-      const res = await axios.get('http://localhost:8000/api/recuperer/plannification');
+      const res = await Api.get('/api/recuperer/plannification');
   
       console.log("Réponse complète de l'API:", res.data);
       
@@ -169,7 +169,7 @@ const MealPlanner = () => {
         utilisateur_id: user.id
       };
 
-      await axios.post('http://localhost:8000/api/ajouter/plannification', requestData);
+      await Api.post('/api/ajouter/plannification', requestData);
       
       toast.success('Repas planifié avec succès !', {
         ...toastConfig,
@@ -205,7 +205,7 @@ const MealPlanner = () => {
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
       <ToastContainer />
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto mt-16">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Planificateur de repas</h2>
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
