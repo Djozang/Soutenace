@@ -18,7 +18,7 @@ class HealthParameterController extends Controller
     {
         $request->validate([
             'poids' => 'nullable|numeric',
-            'tension' => 'nullable|string|max:255',
+            'tension' => 'nullable|numeric|max:255',
             'température' => 'nullable|numeric',
             'date_enregistrement' => 'required|date',
         ]);

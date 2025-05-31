@@ -8,8 +8,8 @@ const HealthTracker = () => {
   const [formData, setFormData] = useState({
     poids: '',
     tension: '',
-    temperature: '',
-    date: new Date().toISOString().split('T')[0]
+    température: '',
+    date_enregistrement: new Date().toISOString().split('T')[0]
   });
   const [healthData, setHealthData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,8 +44,8 @@ const HealthTracker = () => {
       setFormData({
         poids: '',
         tension: '',
-        temperature: '',
-        date: new Date().toISOString().split('T')[0]
+        température: '',
+        date_enregistrement: new Date().toISOString().split('T')[0]
       });
     } catch (err) {
       console.error('Failed to save health data', err);
@@ -79,7 +79,7 @@ const HealthTracker = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tension artérielle</label>
                 <input
-                  type="text"
+                  type='number'
                   name="tension"
                   value={formData.tension}
                   onChange={(e) => setFormData({...formData, tension: e.target.value})}
@@ -91,10 +91,10 @@ const HealthTracker = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Température (°C)</label>
                 <input
-                  type="number"
-                  name="temperature"
-                  value={formData.temperature}
-                  onChange={(e) => setFormData({...formData, temperature: e.target.value})}
+                  type="numeric"
+                  name="température"
+                  value={formData.température}
+                  onChange={(e) => setFormData({...formData, température: e.target.value})}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   step="0.1"
                 />
@@ -105,8 +105,8 @@ const HealthTracker = () => {
                 <input
                   type="date"
                   name="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({...formData, date: e.target.value})}
+                  value={formData.date_enregistrement}
+                  onChange={(e) => setFormData({...formData, date_enregistrement: e.target.value})}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -151,7 +151,7 @@ const HealthTracker = () => {
                       <Tooltip />
                       <Legend />
                       <Line yAxisId="left" type="monotone" dataKey="poids" stroke="#8884d8" name="Poids (kg)" />
-                      <Line yAxisId="right" type="monotone" dataKey="temperature" stroke="#82ca9d" name="Température (°C)" />
+                      <Line yAxisId="right" type="monotone" dataKey="température" stroke="#82ca9d" name="Température (°C)" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -173,10 +173,10 @@ const HealthTracker = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {healthData.map((entry, index) => (
                       <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.date_enregistrement}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.poids || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.tension || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.temperature || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{entry.température || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

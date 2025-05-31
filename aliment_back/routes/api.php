@@ -5,6 +5,7 @@ use App\Http\Controllers\FoodRecommendationsController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealPlanController;
 use App\Http\Controllers\HealthParameterController;
+use App\Http\Controllers\NutritionnisteController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
@@ -12,6 +13,8 @@ use App\Http\Controllers\RepasController;
 use App\Http\Controllers\HealthProgress;
 use App\Http\Controllers\PlannificationController;
 use App\Http\Controllers\HealthConditionController;
+use App\Http\Controllers\PatientController;
+use App\Models\Nutritionniste;
 use Illuminate\Http\Request;
 
 
@@ -69,4 +72,26 @@ Route::middleware('auth:sanctum')->group(function () {
   //routes pour la progression sante
    Route::get('/health-progress', [HealthProgress::class,'progress']);
 
+    // Routes pour la planification des repas
+    Route::post('/meal-plans', [MealPlanController::class, 'store']);
+    Route::get('/meal-plans', [MealPlanController::class, 'index']);
+    Route::get('/meal-plans/{id}', [MealPlanController::class, 'show']);
+    Route::put('/meal-plans/{id}', [MealPlanController::class, 'update']);
+    Route::delete('/meal-plans/{id}', [MealPlanController::class, 'destroy']);
+    // Routes pour les patients
+    Route::apiResource('patients', PatientController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+
+    //Routes pour les admins
+    Route::get('/admins', [AuthController::class, 'getAdmins']);
+    Route::get('/patients', [PatientController::class, 'index']);
+    Route::get('/patients/{id}', [PatientController::class, 'show']);
+    Route::put('/patients/{id}', [PatientController::class, 'update']);
+    Route::delete('/patients/{id}', [PatientController::class, 'destroy']);
+    // Routes pour les nutritionnistes
+    Route::get('/nutritionists', [NutritionnisteController::class, 'index']);
+    Route::post('/nutritionists', [NutritionnisteController::class, 'store']);
+    Route::get('/nutritionists/{id}', [NutritionnisteController::class, 'show']);
+    Route::put('/nutritionists/{id}', [NutritionnisteController::class, 'update']);
+    Route::delete('/nutritionists/{id}', [NutritionnisteController::class, 'destroy']);
+    
 });

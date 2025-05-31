@@ -12,7 +12,8 @@ class PatientController extends Controller
      */
     public function index()
     {
-        //
+        $patients = patient::all();
+        return response()->json($patients);
     }
 
     /**
@@ -28,7 +29,18 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'état_santé' => 'required|in:sain,malade',
+            'maladie' => 'nullable|required_if:état_santé,malade|string|max:255',
+        ]);
+
+        $patient = patient::create([
+            'user_id' => $request->user()->id,
+            'état_santé' => $request->état_santé,
+            'maladie' => $request->maladie,
+        ]);
+
+        return response()->json($patient, 201);
     }
 
     /**
@@ -36,7 +48,7 @@ class PatientController extends Controller
      */
     public function show(patient $patient)
     {
-        //
+        return response()->json($patient);
     }
 
     /**
@@ -44,7 +56,8 @@ class PatientController extends Controller
      */
     public function edit(patient $patient)
     {
-        //
+        // This method is not typically used in API controllers, but you can return a view if needed.
+        return response()->json(['message' => 'Edit functionality not implemented'], 405);
     }
 
     /**
@@ -52,7 +65,17 @@ class PatientController extends Controller
      */
     public function update(Request $request, patient $patient)
     {
-        //
+        $request->validate([
+            'état_santé' => 'required|in:sain,malade',
+            'maladie' => 'nullable|required_if:état_santé,malade|string|max:255',
+        ]);
+
+        $patient->update([
+            'état_santé' => $request->état_santé,
+            'maladie' => $request->maladie,
+        ]);
+
+        return response()->json($patient);
     }
 
     /**
@@ -60,6 +83,7 @@ class PatientController extends Controller
      */
     public function destroy(patient $patient)
     {
-        //
+        $patient->delete();
+        return response()->json(['message' => 'Patient deleted successfully'], 204);
     }
 }

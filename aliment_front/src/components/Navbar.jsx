@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChefHat, Menu, X, Home, BarChart3, Calendar, Heart, User, LogOut, LogIn, UserPlus, Sparkles } from 'lucide-react';
+import { ChefHat, Menu, X, Home, BarChart3, Calendar, Heart, User, LogOut, LogIn, UserPlus, Sparkles, Users, Settings, ClipboardList } from 'lucide-react';
 import { useAuth } from '../Contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -28,17 +28,56 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
-  const authenticatedNavItems = [
-    { icon: <Home className="w-4 h-4" />, label: 'Dashboard', href: '/dashboard' },
+  // Items de navigation communs à tous les utilisateurs connectés
+  const commonAuthenticatedItems = [
+    { icon: <User className="w-4 h-4" />, label: 'Profil', href: '/profile' },
+  ];
+
+  // Items spécifiques aux patients
+  const patientItems = [
     { icon: <Calendar className="w-4 h-4" />, label: 'Planificateur', href: '/meal-planner' },
     { icon: <BarChart3 className="w-4 h-4" />, label: 'Suivi Santé', href: '/health-tracker' },
     { icon: <Heart className="w-4 h-4" />, label: 'Recettes', href: '/recipes' },
-    { icon: <User className="w-4 h-4" />, label: 'Profil', href: '/profile' },
+  ];
+
+  // Items spécifiques aux nutritionnistes
+  const nutritionistItems = [
+    { icon: <Home className="w-4 h-4" />, label: 'Dashboard', href: '/dashboard' },
+    { icon: <Users className="w-4 h-4" />, label: 'Mes Patients', href: '/nutritionist/patients' },
+    { icon: <ClipboardList className="w-4 h-4" />, label: 'Plans Nutritionnels', href: '/nutritionist/meal-plans' },
+  ];
+
+  // Items spécifiques aux administrateurs
+  const adminItems = [
+    { icon: <Users className="w-4 h-4" />, label: 'Utilisateurs', href: '/admin/users' },
+    { icon: <Home className="w-4 h-4" />, label: 'Dashboard', href: '/admin/dashboard' },
+
+    { icon: <Settings className="w-4 h-4" />, label: 'Administration', href: '/admin/settings' },
   ];
 
   const unauthenticatedNavItems = [
     { icon: <LogIn className="w-4 h-4" />, label: 'Connexion', href: '/login' },
     { icon: <UserPlus className="w-4 h-4" />, label: 'Inscription', href: '/register' },
+  ];
+
+  // Déterminer les items en fonction du rôle de l'utilisateur
+  const getRoleSpecificItems = () => {
+    if (!user?.role) return [];
+    
+    switch(user.role) {
+      case 'admin':
+        return [...adminItems];
+      case 'nutritionniste':
+        return [...nutritionistItems];
+      case 'patient':
+      default:
+        return [...patientItems];
+    }
+  };
+
+  const authenticatedNavItems = [
+    ...commonAuthenticatedItems,
+    ...getRoleSpecificItems()
   ];
 
   const navItems = isAuthenticated ? authenticatedNavItems : unauthenticatedNavItems;

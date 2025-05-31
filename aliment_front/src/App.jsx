@@ -10,6 +10,10 @@ import HealthTracker from './components/HealthTracker';
 import Recipes from './components/Recipes';
 import Profile from './components/Profile';
 import Navbar from './components/Navbar';
+import ProfileCom from './nutritionniste/profil';
+import PatientsPage from './nutritionniste/patients';
+import MealPlansPage from './nutritionniste/plannernutri';
+import AddPatientForm from './components/AjoutPatient';
 
 function App() {
   return (
@@ -26,6 +30,11 @@ function App() {
             <Route path="/health-tracker" element={<HealthTracker />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/nutritionistprofile" element={<ProfileCom />} />
+            <Route path="/nutritionist/patients" element={<PatientsPage />} />
+            <Route path="/nutritionist/meal-plans" element={<MealPlansPage />} />
+            <Route path="/nutritionist/add-patient" element={<AddPatientForm />} />
+            {/* Ajoutez d'autres routes ici si nécessaire */}
           </Routes>
         </div>
       </Router>
