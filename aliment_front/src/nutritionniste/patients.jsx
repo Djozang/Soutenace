@@ -65,7 +65,7 @@ const PatientsPage = () => {
         email: "",
         état_santé: "",
         maladie: "null",
-        status: "active",
+        // status: "active",
       });
       toast.success("Patient ajouté avec succès");
     } catch (error) {
@@ -160,37 +160,6 @@ const PatientsPage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">
-                Patients Actifs
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                {patients.filter((p) => p.status === "active").length}
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">
-                Patients Inactifs
-              </p>
-              <p className="text-2xl font-bold text-red-600">
-                {patients.filter((p) => p.status === "inactive").length}
-              </p>
-            </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
@@ -230,18 +199,7 @@ const PatientsPage = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-gray-400" />
-              <select
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="active">Actifs</option>
-                <option value="inactive">Inactifs</option>
-              </select>
-            </div>
+         
           </div>
 
           <button
@@ -264,9 +222,7 @@ const PatientsPage = () => {
                   Patient
                 </th>
                 
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
+           
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Progression
                 </th>
@@ -303,15 +259,7 @@ const PatientsPage = () => {
                       </div>
                     </td>
                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                          patient.status
-                        )}`}
-                      >
-                        {patient.status === "active" ? "Actif" : "Inactif"}
-                      </span>
-                    </td>
+                
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
@@ -460,20 +408,7 @@ const PatientsPage = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Statut
-                </label>
-                <select
-                  name="status"
-                  value={newPatient.status}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="active">Actif</option>
-                  <option value="inactive">Inactif</option>
-                </select>
-              </div>
+           
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button

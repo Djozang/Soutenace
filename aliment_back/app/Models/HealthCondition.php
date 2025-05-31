@@ -8,8 +8,9 @@ class HealthCondition extends Model
 {
     protected $fillable = ['name', 'description'];
 
-    public function user()
+    // HealthCondition.php
+    public function users()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsToMany(User::class, 'user_health_condition');
     }
 }

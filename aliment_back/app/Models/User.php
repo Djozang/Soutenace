@@ -6,18 +6,29 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Admin;
+use App\Models\Patient;
+use App\Models\Nutritionniste;
+use App\Models\HealthCondition;
+use App\Models\MealPlan;
+use App\Models\HealthParameter;
+use App\Models\Notification;
 
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable, HasFactory;
 
+
     protected $fillable = [
-        'nom', 'email', 'password', 'role',
+        'nom',
+        'email',
+        'password',
+        'role',
     ];
 
     protected $hidden = ['password'];
 
-   public function admin ()
+    public function admin()
     {
         return $this->hasOne(Admin::class);
     }
@@ -31,11 +42,16 @@ class User extends Authenticatable
         return $this->hasOne(Nutritionniste::class);
     }
 
-    public function healthConditions()
+    public function healthCondition()
     {
-        return $this->belongsToMany(HealthCondition::class);
+        return $this->hasOne(HealthCondition::class);
     }
 
+    public function healthConditions()
+    {
+        return $this->belongsToMany(HealthCondition::class, 'user_health_condition')
+            ->withTimestamps();
+    }
     public function mealPlans()
     {
         return $this->hasMany(MealPlan::class);

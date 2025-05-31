@@ -14,6 +14,7 @@ use App\Http\Controllers\HealthProgress;
 use App\Http\Controllers\PlannificationController;
 use App\Http\Controllers\HealthConditionController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\AdminController;
 use App\Models\Nutritionniste;
 use Illuminate\Http\Request;
 
@@ -81,7 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Routes pour les patients
     Route::apiResource('patients', PatientController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
-    //Routes pour les admins
+    //Routes pour 
     Route::get('/admins', [AuthController::class, 'getAdmins']);
     Route::get('/patients', [PatientController::class, 'index']);
     Route::get('/patients/{id}', [PatientController::class, 'show']);
@@ -94,4 +95,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/nutritionists/{id}', [NutritionnisteController::class, 'update']);
     Route::delete('/nutritionists/{id}', [NutritionnisteController::class, 'destroy']);
     
+    //Routes pour les administrateurs
+
+    Route::get('/admin/stats', [AdminController::class, 'getStats']);
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::get('/admin/nutritionists', [AdminController::class, 'getNutritionnistes']);
+
+    Route::get('/admin/activities', [AdminController::class, 'getActivities']);
+    Route::get('/admin/system', [AdminController::class, 'getSystemInfo']);
+    Route::get('/admin/security', [AdminController::class, 'getSecurityInfo']);
 });

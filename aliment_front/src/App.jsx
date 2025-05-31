@@ -14,6 +14,8 @@ import ProfileCom from './nutritionniste/profil';
 import PatientsPage from './nutritionniste/patients';
 import MealPlansPage from './nutritionniste/plannernutri';
 import AddPatientForm from './components/AjoutPatient';
+import AdminDashboard from './Pages/Admin/dashboardAdmin';
+import AdminSettings from './Pages/Admin/settings';
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
             <Route path="/nutritionist/patients" element={<PatientsPage />} />
             <Route path="/nutritionist/meal-plans" element={<MealPlansPage />} />
             <Route path="/nutritionist/add-patient" element={<AddPatientForm />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
             {/* Ajoutez d'autres routes ici si nécessaire */}
           </Routes>
         </div>

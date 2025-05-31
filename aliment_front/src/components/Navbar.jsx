@@ -49,9 +49,7 @@ const Navbar = () => {
 
   // Items spécifiques aux administrateurs
   const adminItems = [
-    { icon: <Users className="w-4 h-4" />, label: 'Utilisateurs', href: '/admin/users' },
     { icon: <Home className="w-4 h-4" />, label: 'Dashboard', href: '/admin/dashboard' },
-
     { icon: <Settings className="w-4 h-4" />, label: 'Administration', href: '/admin/settings' },
   ];
 

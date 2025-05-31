@@ -10,7 +10,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // États communs
+  // États
   const [loading, setLoading] = useState({
     profile: false,
     conditions: false,
@@ -19,45 +19,58 @@ const Profile = () => {
     users: false
   });
   
-  // États pour patient
   const [conditions, setConditions] = useState([]);
   const [selectedConditions, setSelectedConditions] = useState([]);
-  
-  // États pour nutritionniste
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // États pour admin
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({});
   const [users, setUsers] = useState([]);
 
+  // Chargement initial
   useEffect(() => {
-    if (user?.healthConditions) {
-      setSelectedConditions(user.healthConditions);
-    }
-    
-    fetchConditions();
-    
-    if (user?.role === 'nutritionniste') {
-      fetchPatients();
-    } else if (user?.role === 'admin') {
-      fetchStats();
-      fetchAllUsers();
-    }
-  }, [user]);
+    const loadData = async () => {
+      try {
+        // Charger les conditions médicales
+        setLoading(prev => ({ ...prev, conditions: true }));
+        const conditionsRes = await Api.get('/api/health-conditions');
+        setConditions(conditionsRes.data.data || conditionsRes.data);
+        
+        // Initialiser les conditions sélectionnées
+        if (user?.healthConditions) {
+          setSelectedConditions(user.healthConditions);
+        }
 
-  // Fonctions API communes
-  const fetchConditions = async () => {
-    try {
-      setLoading(prev => ({ ...prev, conditions: true }));
-      const response = await Api.get('/api/health-conditions');
-      setConditions(response.data.data || response.data);
-    } catch (error) {
-      handleApiError(error, 'le chargement des conditions');
-    } finally {
-      setLoading(prev => ({ ...prev, conditions: false }));
-    }
-  };
+        // Charger les données spécifiques au rôle
+        if (user?.role === 'nutritionniste') {
+          setLoading(prev => ({ ...prev, patients: true }));
+          const patientsRes = await Api.get('/api/patients');
+          setPatients(patientsRes.data.data || patientsRes.data);
+        } 
+        else if (user?.role === 'admin') {
+          setLoading(prev => ({ ...prev, stats: true, users: true }));
+          const [statsRes, usersRes] = await Promise.all([
+            Api.get('/api/admin/stats'),
+            Api.get('/api/admin/users'),
+            Api.get('/api/admin/nutritionists')
+          ]);
+          setStats(statsRes.data.data || statsRes.data);
+          setUsers(usersRes.data.data || usersRes.data);
+        }
+      } catch (error) {
+        handleApiError(error, 'le chargement des données');
+      } finally {
+        setLoading({
+          profile: false,
+          conditions: false,
+          patients: false,
+          stats: false,
+          users: false
+        });
+      }
+    };
+
+    loadData();
+  }, [user]);
 
   // Fonctions pour patient
   const handleConditionToggle = (conditionId) => {
@@ -68,48 +81,14 @@ const Profile = () => {
     );
   };
 
-  // Fonctions pour nutritionniste
-  const fetchPatients = async () => {
-    try {
-      setLoading(prev => ({ ...prev, patients: true }));
-      const response = await Api.get('/api/patients');
-      setPatients(response.data.data || response.data);
-    } catch (error) {
-      handleApiError(error, 'le chargement des patients');
-    } finally {
-      setLoading(prev => ({ ...prev, patients: false }));
-    }
-  };
-
-  const filteredPatients = patients.filter(patient =>
-    patient.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Fonctions pour admin
-  const fetchStats = async () => {
-    try {
-      setLoading(prev => ({ ...prev, stats: true }));
-      const response = await Api.get('/admin/stats');
-      setStats(response.data.data || response.data);
-    } catch (error) {
-      handleApiError(error, 'le chargement des statistiques');
-    } finally {
-      setLoading(prev => ({ ...prev, stats: false }));
-    }
-  };
-
-  const fetchAllUsers = async () => {
-    try {
-      setLoading(prev => ({ ...prev, users: true }));
-      const response = await Api.get('/admin/users');
-      setUsers(response.data.data || response.data);
-    } catch (error) {
-      handleApiError(error, 'le chargement des utilisateurs');
-    } finally {
-      setLoading(prev => ({ ...prev, users: false }));
-    }
-  };
+  // Filtrage des patients
+  const filteredPatients = patients.filter(patient => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (patient.nom && patient.nom.toLowerCase().includes(searchLower)) ||
+      (patient.email && patient.email.toLowerCase().includes(searchLower))
+    );
+  });
 
   // Gestion des erreurs
   const handleUnauthorized = () => {
@@ -121,16 +100,14 @@ const Profile = () => {
   const handleApiError = (error, context) => {
     console.error(`Erreur lors de ${context}:`, error);
     
-    let errorMessage = "Une erreur est survenue";
-    if (error.response) {
-      if (error.response.status === 401) {
-        handleUnauthorized();
-        return;
-      }
-      errorMessage = error.response.data?.message || errorMessage;
+    if (error.response?.status === 401) {
+      handleUnauthorized();
+      return;
     }
 
-    toast.error(`${errorMessage} (${context})`);
+    const errorMessage = error.response?.data?.message || 
+                       `Une erreur est survenue (${context})`;
+    toast.error(errorMessage);
   };
 
   // Soumission du formulaire
@@ -145,9 +122,8 @@ const Profile = () => {
     try {
       setLoading(prev => ({ ...prev, profile: true }));
       
-      const response = await Api.put('/profile', {
-        health_conditions: selectedConditions,
-        // Autres champs selon le rôle
+      const response = await Api.put('/api/profile', {
+        health_conditions: selectedConditions
       });
 
       updateProfile(response.data.user);
@@ -159,18 +135,18 @@ const Profile = () => {
     }
   };
 
-  // Affichage du loading
-  if (loading.conditions && user?.role === 'patient') {
+  // Affichage conditionnel
+  if (!user) {
     return <LoadingSpinner />;
   }
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 mt-16">
-      {/* Section commune à tous */}
+      {/* Section commune */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <UserHeader user={user} />
         
-        {user?.role === 'patient' && (
+        {user.role === 'patient' && (
           <PatientForm
             conditions={conditions}
             selectedConditions={selectedConditions}
@@ -182,7 +158,7 @@ const Profile = () => {
       </div>
 
       {/* Section nutritionniste */}
-      {user?.role === 'nutritionniste' && (
+      {user.role === 'nutritionniste' && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Mes patients</h2>
@@ -204,7 +180,7 @@ const Profile = () => {
       )}
 
       {/* Section admin */}
-      {user?.role === 'admin' && (
+      {user.role === 'admin' && (
         <>
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Statistiques</h2>
@@ -225,7 +201,7 @@ const Profile = () => {
   );
 };
 
-// Composants enfants
+// Composants enfants (identique à votre version précédente)
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center min-h-[200px]">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -236,10 +212,10 @@ const UserHeader = ({ user }) => (
   <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
     <div className="flex items-center space-x-4 mb-4 md:mb-0">
       <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold">
-        {user?.name?.charAt(0) || 'U'}
+        {user?.nom?.charAt(0) || 'U'}
       </div>
       <div>
-        <h3 className="text-lg font-bold text-gray-800">{user?.name}</h3>
+        <h3 className="text-lg font-bold text-gray-800">{user?.nom || 'Utilisateur'}</h3>
         <p className="text-gray-600">{user?.email}</p>
         <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
           {user?.role === 'admin' ? 'Administrateur' : 
@@ -317,8 +293,8 @@ const PatientTable = ({ patients }) => (
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dernière consultation</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progression</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -331,22 +307,15 @@ const PatientTable = ({ patients }) => (
                     {patient.nom?.charAt(0) || 'P'}
                   </div>
                   <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">{patient.nom || 'Non renseigné'}</div>
-                    <div className="text-sm text-gray-500">{patient.email}</div>
+                    <div className="text-sm font-medium text-gray-900">{patient.user_id?.nom || 'Non renseigné'}</div>
                   </div>
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {patient.updated_at ? new Date(patient.updated_at).toLocaleDateString() : 'Jamais'}
+                {patient.état_santé || 'Non renseigné'}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="bg-green-600 h-2.5 rounded-full" 
-                    style={{ width: `${patient.progress || 0}%` }}
-                  ></div>
-                </div>
-                <span className="text-xs text-gray-500 mt-1">{patient.progress || 0}%</span>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {patient.updated_at ? new Date(patient.updated_at).toLocaleDateString() : 'Jamais'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button className="text-blue-600 hover:text-blue-900 mr-4">Voir</button>
@@ -372,21 +341,21 @@ const AdminStats = ({ stats, loading }) => (
       <>
         <StatCard 
           title="Utilisateurs" 
-          value={stats?.total_users} 
+          value={stats?.total_users || 0} 
           icon="👥"
-          trend={stats?.user_growth}
+          trend={stats?.user_growth || 0}
         />
         <StatCard 
           title="Nutritionnistes" 
-          value={stats?.total_nutritionists} 
+          value={stats?.total_nutritionnistes || 0} 
           icon="👩‍⚕️"
-          trend={stats?.nutritionist_growth}
+          trend={stats?.nutritionist_growth || 0}
         />
         <StatCard 
           title="Consultations" 
-          value={stats?.total_consultations} 
+          value={stats?.total_consultations || 0} 
           icon="📅"
-          trend={stats?.consultation_growth}
+          trend={stats?.consultation_growth || 0}
         />
       </>
     )}
@@ -400,12 +369,10 @@ const StatCard = ({ title, value, icon, trend }) => (
       <span className="text-2xl">{icon}</span>
     </div>
     <div className="mt-2 flex items-baseline">
-      <span className="text-3xl font-bold text-gray-900">{value || '0'}</span>
-      {trend !== undefined && (
-        <span className={`ml-2 text-sm font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
-        </span>
-      )}
+      <span className="text-3xl font-bold text-gray-900">{value}</span>
+      <span className={`ml-2 text-sm font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+      </span>
     </div>
   </div>
 );
@@ -418,7 +385,6 @@ const UserManagement = ({ users }) => (
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
@@ -446,13 +412,7 @@ const UserManagement = ({ users }) => (
                  user.role === 'nutritionniste' ? 'Nutritionniste' : 'Patient'}
               </span>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap">
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {user.is_active ? 'Actif' : 'Inactif'}
-              </span>
-            </td>
+            
             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
               <button className="text-indigo-600 hover:text-indigo-900 mr-3">Éditer</button>
               <button className="text-red-600 hover:text-red-900">Supprimer</button>
