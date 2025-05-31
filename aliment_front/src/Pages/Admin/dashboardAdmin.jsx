@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import Api from '../../services/Api';
-import icon from '../../assets/icons.png';
-import { 
-  Shield, 
-  Users, 
-  Settings, 
-  BarChart3, 
-  Database, 
-  AlertTriangle, 
-  CheckCircle, 
+import React, { useState, useEffect } from "react";
+import Api from "../../services/Api";
+import icon from "../../assets/icons.png";
+import {
+  Shield,
+  Users,
+  Settings,
+  BarChart3,
+  Database,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   Activity,
   Server,
@@ -23,10 +23,10 @@ import {
   Clock,
   Mail,
   FileText,
-  Zap
-} from 'lucide-react';
+  Zap,
+} from "lucide-react";
 
-import { useAuth } from '../../Contexts/AuthContext';
+import { useAuth } from "../../Contexts/AuthContext";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -36,21 +36,31 @@ const AdminDashboard = () => {
   const [systemMetrics, setSystemMetrics] = useState({});
   const [securityAlerts, setSecurityAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [newUser, setNewUser] = useState({
+    nom: "",
+    email: "",
+    role: "patient",
+    password: "",
+  });
 
   useEffect(() => {
     if (!user) return;
 
     const loadData = async () => {
       try {
-        const [statsRes, usersRes, activitiesRes, systemRes, securityRes] = await Promise.all([
-          Api.get('/api/admin/stats'),
-          Api.get('/api/admin/users'),
-          Api.get('/api/admin/activities'),
-          Api.get('/api/admin/system'),
-        //   Api.get('/api/admin/security')
-        ]);
+        const [statsRes, usersRes, activitiesRes, systemRes, securityRes] =
+          await Promise.all([
+            Api.get("/api/admin/stats"),
+            Api.get("/api/admin/users"),
+            Api.get("/api/admin/activities"),
+            Api.get("/api/admin/system"),
+            //   Api.get('/api/admin/security')
+          ]);
 
         setStats(statsRes.data);
         setUsers(usersRes.data);
@@ -58,7 +68,7 @@ const AdminDashboard = () => {
         setSystemMetrics(systemRes.data);
         setSecurityAlerts(securityRes?.data || []);
       } catch (err) {
-        setError('Erreur lors du chargement des données administrateur');
+        setError("Erreur lors du chargement des données administrateur");
       } finally {
         setLoading(false);
       }
@@ -66,27 +76,94 @@ const AdminDashboard = () => {
 
     loadData();
   }, [user]);
+  const handleAddUser = async () => {
+    try {
+      const response = await Api.post("/api/admin/users", newUser);
+      setUsers([...users, response.data]);
+      setIsAddUserModalOpen(false);
+      setNewUser({
+        nom: "",
+        email: "",
+        role: "patient",
+        password: "",
+      });
+    } catch (error) {
+      setError("Erreur lors de l'ajout de l'utilisateur");
+    }
+  };
 
-  if (!user) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Shield className="w-8 h-8 text-red-600" />
+  const handleEditUser = async () => {
+    try {
+      const response = await Api.put(
+        `/api/admin/users/${currentUser.id}`,
+        currentUser
+      );
+      setUsers(users.map((u) => (u.id === currentUser.id ? response.data : u)));
+      setIsEditUserModalOpen(false);
+    } catch (error) {
+      setError("Erreur lors de la modification de l'utilisateur");
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (
+      window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
+    ) {
+      try {
+        await Api.delete(`/api/admin/users/${userId}`);
+        setUsers(users.filter((u) => u.id !== userId));
+      } catch (error) {
+        setError("Erreur lors de la suppression de l'utilisateur");
+      }
+    }
+  };
+
+  const handleViewUser = (user) => {
+    setCurrentUser(user);
+    // Ici vous pourriez ouvrir un modal ou naviguer vers une page de détail
+    alert(
+      `Détails de l'utilisateur:\nNom: ${user.nom}\nEmail: ${user.email}\nRôle: ${user.role}`
+    );
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewUser((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentUser((prev) => ({ ...prev, [name]: value }));
+  };
+
+  if (!user)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            Accès Administrateur Requis
+          </h3>
+          <p className="text-gray-600">
+            Connexion avec privilèges administrateur nécessaire.
+          </p>
         </div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">Accès Administrateur Requis</h3>
-        <p className="text-gray-600">Connexion avec privilèges administrateur nécessaire.</p>
       </div>
-    </div>
-  );
+    );
 
-  if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-slate-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-slate-300">Chargement du panneau administrateur...</p>
+  if (loading)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-300">
+            Chargement du panneau administrateur...
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 mt-16">
@@ -102,15 +179,19 @@ const AdminDashboard = () => {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   AdminPanel Pro
                 </h1>
-                <p className="text-sm text-slate-400">Panneau de contrôle système</p>
+                <p className="text-sm text-slate-400">
+                  Panneau de contrôle système
+                </p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-green-900/50 px-3 py-1 rounded-full">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-400 text-sm font-medium">Système OK</span>
+                  <span className="text-green-400 text-sm font-medium">
+                    Système OK
+                  </span>
                 </div>
                 <div className="text-slate-400 text-sm">
                   Uptime: {stats.server_uptime}
@@ -121,9 +202,9 @@ const AdminDashboard = () => {
                   <p className="font-semibold text-white">{user.nom}</p>
                   <p className="text-sm text-slate-400">{user.role}</p>
                 </div>
-                <img 
-                  src={icon} 
-                  alt="Avatar" 
+                <img
+                  src={icon}
+                  alt="Avatar"
                   className="w-10 h-10 rounded-full border-2 border-blue-400"
                 />
               </div>
@@ -142,18 +223,34 @@ const AdminDashboard = () => {
         {/* Navigation Tabs */}
         <div className="flex space-x-1 mb-8 bg-slate-800/50 p-1 rounded-xl">
           {[
-            { id: 'overview', label: 'Vue d\'ensemble', icon: <BarChart3 className="w-4 h-4" /> },
-            { id: 'users', label: 'Utilisateurs', icon: <Users className="w-4 h-4" /> },
-            { id: 'system', label: 'Système', icon: <Server className="w-4 h-4" /> },
-            { id: 'security', label: 'Sécurité', icon: <Lock className="w-4 h-4" /> }
-          ].map(tab => (
+            {
+              id: "overview",
+              label: "Vue d'ensemble",
+              icon: <BarChart3 className="w-4 h-4" />,
+            },
+            {
+              id: "users",
+              label: "Utilisateurs",
+              icon: <Users className="w-4 h-4" />,
+            },
+            {
+              id: "system",
+              label: "Système",
+              icon: <Server className="w-4 h-4" />,
+            },
+            {
+              id: "security",
+              label: "Sécurité",
+              icon: <Lock className="w-4 h-4" />,
+            },
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-blue-600 text-white shadow-lg' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                activeTab === tab.id
+                  ? "bg-blue-600 text-white shadow-lg"
+                  : "text-slate-400 hover:text-white hover:bg-slate-700"
               }`}
             >
               {tab.icon}
@@ -163,13 +260,13 @@ const AdminDashboard = () => {
         </div>
 
         {/* Overview Tab */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <div className="space-y-8">
             {/* Key Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <AdminStatCard
                 title="Utilisateurs Total"
-                value={stats.total_users?.toLocaleString() || '0'}
+                value={stats.total_users?.toLocaleString() || "0"}
                 icon={<Users className="w-6 h-6" />}
                 color="from-blue-500 to-blue-600"
                 trend={`+${stats.new_users_today || 0} aujourd'hui`}
@@ -204,21 +301,34 @@ const AdminDashboard = () => {
             {/* Activity Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Recent Activities */}
-              <AdminCard title="Activités Récentes" icon={<Clock className="w-5 h-5" />}>
+              <AdminCard
+                title="Activités Récentes"
+                icon={<Clock className="w-5 h-5" />}
+              >
                 <div className="space-y-3">
                   {activities.slice(0, 6).map((activity, index) => (
-                    <div 
-                      key={activity.id || `activity-${index}`} 
+                    <div
+                      key={activity.id || `activity-${index}`}
                       className="flex items-center space-x-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600"
                     >
-                      <div className={`w-3 h-3 rounded-full ${
-                        activity.type === 'success' ? 'bg-green-400' :
-                        activity.type === 'warning' ? 'bg-yellow-400' :
-                        activity.type === 'danger' ? 'bg-red-400' : 'bg-blue-400'
-                      }`}></div>
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          activity.type === "success"
+                            ? "bg-green-400"
+                            : activity.type === "warning"
+                            ? "bg-yellow-400"
+                            : activity.type === "danger"
+                            ? "bg-red-400"
+                            : "bg-blue-400"
+                        }`}
+                      ></div>
                       <div className="flex-1">
-                        <p className="text-white font-medium">{activity.action}</p>
-                        <p className="text-slate-400 text-sm">{activity.user} • {activity.timestamp}</p>
+                        <p className="text-white font-medium">
+                          {activity.action}
+                        </p>
+                        <p className="text-slate-400 text-sm">
+                          {activity.user} • {activity.timestamp}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -226,18 +336,39 @@ const AdminDashboard = () => {
               </AdminCard>
 
               {/* System Health */}
-              <AdminCard title="État du Système" icon={<Server className="w-5 h-5" />}>
+              <AdminCard
+                title="État du Système"
+                icon={<Server className="w-5 h-5" />}
+              >
                 <div className="space-y-4">
-                  <MetricBar label="CPU" value={systemMetrics.cpu_usage || 0} color="blue" />
-                  <MetricBar label="Mémoire" value={systemMetrics.memory_usage || 0} color="green" />
-                  <MetricBar label="Disque" value={systemMetrics.disk_usage || 0} color="purple" />
+                  <MetricBar
+                    label="CPU"
+                    value={systemMetrics.cpu_usage || 0}
+                    color="blue"
+                  />
+                  <MetricBar
+                    label="Mémoire"
+                    value={systemMetrics.memory_usage || 0}
+                    color="green"
+                  />
+                  <MetricBar
+                    label="Disque"
+                    value={systemMetrics.disk_usage || 0}
+                    color="purple"
+                  />
                   <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-600">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-400">{systemMetrics.active_connections || 0}</p>
-                      <p className="text-slate-400 text-sm">Connexions actives</p>
+                      <p className="text-2xl font-bold text-green-400">
+                        {systemMetrics.active_connections || 0}
+                      </p>
+                      <p className="text-slate-400 text-sm">
+                        Connexions actives
+                      </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-400">{systemMetrics.response_time || 0}ms</p>
+                      <p className="text-2xl font-bold text-blue-400">
+                        {systemMetrics.response_time || 0}ms
+                      </p>
                       <p className="text-slate-400 text-sm">Temps de réponse</p>
                     </div>
                   </div>
@@ -248,12 +379,18 @@ const AdminDashboard = () => {
         )}
 
         {/* Users Tab */}
-        {activeTab === 'users' && (
-          <AdminCard title="Gestion des Utilisateurs" icon={<Users className="w-5 h-5" />}>
+        {activeTab === "users" && (
+          <AdminCard
+            title="Gestion des Utilisateurs"
+            icon={<Users className="w-5 h-5" />}
+          >
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-2">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                  <button
+                    onClick={() => setIsAddUserModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
                     Ajouter Utilisateur
                   </button>
                   <button className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
@@ -264,46 +401,70 @@ const AdminDashboard = () => {
                   {users.length} utilisateurs au total
                 </div>
               </div>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-600">
-                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Utilisateur</th>
-                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Rôle</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">
+                        Utilisateur
+                      </th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">
+                        Rôle
+                      </th>
 
-                      <th className="text-left py-3 px-4 text-slate-300 font-medium">Actions</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-medium">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user, index) => (
-                      <tr 
-                        key={user.id || `user-${index}`} 
+                      <tr
+                        key={user.id || `user-${index}`}
                         className="border-b border-slate-700 hover:bg-slate-700/30"
                       >
                         <td className="py-3 px-4">
                           <div>
                             <p className="text-white font-medium">{user.nom}</p>
-                            <p className="text-slate-400 text-sm">{user.email}</p>
+                            <p className="text-slate-400 text-sm">
+                              {user.email}
+                            </p>
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            user.role === 'Nutritionniste' ? 'bg-purple-900/50 text-purple-300' : 'bg-blue-900/50 text-blue-300'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              user.role === "Nutritionniste"
+                                ? "bg-purple-900/50 text-purple-300"
+                                : "bg-blue-900/50 text-blue-300"
+                            }`}
+                          >
                             {user.role}
                           </span>
                         </td>
-                        
+
                         <td className="py-3 px-4">
                           <div className="flex space-x-2">
-                            <button className="text-blue-400 hover:text-blue-300 p-1">
+                            <button
+                              onClick={() => handleViewUser(user)}
+                              className="text-blue-400 hover:text-blue-300 p-1"
+                            >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button className="text-green-400 hover:text-green-300 p-1">
+                            <button
+                              onClick={() => {
+                                setCurrentUser(user);
+                                setIsEditUserModalOpen(true);
+                              }}
+                              className="text-green-400 hover:text-green-300 p-1"
+                            >
                               <Edit3 className="w-4 h-4" />
                             </button>
-                            <button className="text-red-400 hover:text-red-300 p-1">
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-400 hover:text-red-300 p-1"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -318,53 +479,78 @@ const AdminDashboard = () => {
         )}
 
         {/* System Tab */}
-        {activeTab === 'system' && (
+        {activeTab === "system" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <AdminCard title="Métriques Système" icon={<Server className="w-5 h-5" />}>
+            <AdminCard
+              title="Métriques Système"
+              icon={<Server className="w-5 h-5" />}
+            >
               <div className="space-y-6">
-                <MetricBar label="Utilisation CPU" value={systemMetrics.cpu_usage || 0} color="blue" showValue />
-                <MetricBar label="Utilisation Mémoire" value={systemMetrics.memory_usage || 0} color="green" showValue />
-                <MetricBar label="Utilisation Disque" value={systemMetrics.disk_usage || 0} color="purple" showValue />
-                
+                <MetricBar
+                  label="Utilisation CPU"
+                  value={systemMetrics.cpu_usage || 0}
+                  color="blue"
+                  showValue
+                />
+                <MetricBar
+                  label="Utilisation Mémoire"
+                  value={systemMetrics.memory_usage || 0}
+                  color="green"
+                  showValue
+                />
+                <MetricBar
+                  label="Utilisation Disque"
+                  value={systemMetrics.disk_usage || 0}
+                  color="purple"
+                  showValue
+                />
+
                 <div className="pt-4 border-t border-slate-600">
                   <h4 className="text-white font-medium mb-4">Réseau</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-700/50 p-3 rounded-lg">
                       <p className="text-slate-400 text-sm">Entrant</p>
-                      <p className="text-green-400 font-bold">{systemMetrics.network_in || 0} MB/s</p>
+                      <p className="text-green-400 font-bold">
+                        {systemMetrics.network_in || 0} MB/s
+                      </p>
                     </div>
                     <div className="bg-slate-700/50 p-3 rounded-lg">
                       <p className="text-slate-400 text-sm">Sortant</p>
-                      <p className="text-blue-400 font-bold">{systemMetrics.network_out || 0} MB/s</p>
+                      <p className="text-blue-400 font-bold">
+                        {systemMetrics.network_out || 0} MB/s
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
             </AdminCard>
 
-            <AdminCard title="Actions Système" icon={<Settings className="w-5 h-5" />}>
+            <AdminCard
+              title="Actions Système"
+              icon={<Settings className="w-5 h-5" />}
+            >
               <div className="space-y-3">
-                <ActionButton 
+                <ActionButton
                   icon={<Database className="w-4 h-4" />}
                   text="Sauvegarder Base de Données"
                   color="bg-blue-600 hover:bg-blue-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<Zap className="w-4 h-4" />}
                   text="Redémarrer Services"
                   color="bg-yellow-600 hover:bg-yellow-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<FileText className="w-4 h-4" />}
                   text="Générer Rapport"
                   color="bg-green-600 hover:bg-green-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<Settings className="w-4 h-4" />}
                   text="Configuration Système"
                   color="bg-purple-600 hover:bg-purple-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<Mail className="w-4 h-4" />}
                   text="Test Notifications"
                   color="bg-indigo-600 hover:bg-indigo-700"
@@ -375,37 +561,52 @@ const AdminDashboard = () => {
         )}
 
         {/* Security Tab */}
-        {activeTab === 'security' && (
+        {activeTab === "security" && (
           <div className="space-y-8">
             {/* Security Alerts */}
-            <AdminCard title="Alertes de Sécurité" icon={<AlertTriangle className="w-5 h-5" />}>
+            <AdminCard
+              title="Alertes de Sécurité"
+              icon={<AlertTriangle className="w-5 h-5" />}
+            >
               <div className="space-y-3">
                 {securityAlerts.map((alert, index) => (
-                  <div 
+                  <div
                     key={alert.id || `alert-${index}`}
                     className={`p-4 rounded-lg border ${
-                      alert.severity === 'high' ? 'bg-red-900/20 border-red-500/50' :
-                      alert.severity === 'medium' ? 'bg-yellow-900/20 border-yellow-500/50' :
-                      'bg-blue-900/20 border-blue-500/50'
+                      alert.severity === "high"
+                        ? "bg-red-900/20 border-red-500/50"
+                        : alert.severity === "medium"
+                        ? "bg-yellow-900/20 border-yellow-500/50"
+                        : "bg-blue-900/20 border-blue-500/50"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <AlertTriangle className={`w-5 h-5 ${
-                          alert.severity === 'high' ? 'text-red-400' :
-                          alert.severity === 'medium' ? 'text-yellow-400' :
-                          'text-blue-400'
-                        }`} />
+                        <AlertTriangle
+                          className={`w-5 h-5 ${
+                            alert.severity === "high"
+                              ? "text-red-400"
+                              : alert.severity === "medium"
+                              ? "text-yellow-400"
+                              : "text-blue-400"
+                          }`}
+                        />
                         <div>
                           <p className="text-white font-medium">{alert.type}</p>
-                          <p className="text-slate-400 text-sm">IP: {alert.ip} • {alert.timestamp}</p>
+                          <p className="text-slate-400 text-sm">
+                            IP: {alert.ip} • {alert.timestamp}
+                          </p>
                         </div>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        alert.severity === 'high' ? 'bg-red-900/50 text-red-300' :
-                        alert.severity === 'medium' ? 'bg-yellow-900/50 text-yellow-300' :
-                        'bg-blue-900/50 text-blue-300'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          alert.severity === "high"
+                            ? "bg-red-900/50 text-red-300"
+                            : alert.severity === "medium"
+                            ? "bg-yellow-900/50 text-yellow-300"
+                            : "bg-blue-900/50 text-blue-300"
+                        }`}
+                      >
                         {alert.severity.toUpperCase()}
                       </span>
                     </div>
@@ -415,30 +616,176 @@ const AdminDashboard = () => {
             </AdminCard>
 
             {/* Security Actions */}
-            <AdminCard title="Actions de Sécurité" icon={<Lock className="w-5 h-5" />}>
+            <AdminCard
+              title="Actions de Sécurité"
+              icon={<Lock className="w-5 h-5" />}
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ActionButton 
+                <ActionButton
                   icon={<Shield className="w-4 h-4" />}
                   text="Scanner Vulnérabilités"
                   color="bg-red-600 hover:bg-red-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<Lock className="w-4 h-4" />}
                   text="Bloquer IP Suspectes"
                   color="bg-orange-600 hover:bg-orange-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<FileText className="w-4 h-4" />}
                   text="Audit de Sécurité"
                   color="bg-purple-600 hover:bg-purple-700"
                 />
-                <ActionButton 
+                <ActionButton
                   icon={<Settings className="w-4 h-4" />}
                   text="Configurer Firewall"
                   color="bg-slate-600 hover:bg-slate-700"
                 />
               </div>
             </AdminCard>
+          </div>
+        )}
+        {/* Add User Modal */}
+        {isAddUserModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Ajouter un utilisateur
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Nom
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={newUser.nom}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={newUser.email}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Rôle
+                  </label>
+                  <select
+                    name="role"
+                    value={newUser.role}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  >
+                    <option value="patient">patient</option>
+                    <option value="nutritionniste">Nutritionniste</option>
+                    <option value="admin">Administrateur</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={newUser.password}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setIsAddUserModalOpen(false)}
+                  className="px-4 py-2 text-slate-300 hover:text-white"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAddUser}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit User Modal */}
+        {isEditUserModalOpen && currentUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Modifier l'utilisateur
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Nom
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={currentUser.nom}
+                    onChange={handleEditInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={currentUser.email}
+                    onChange={handleEditInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Rôle
+                  </label>
+                  <select
+                    name="role"
+                    value={currentUser.role}
+                    onChange={handleEditInputChange}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                  >
+                    <option value="patient">patient</option>
+                    <option value="Nutritionniste">Nutritionniste</option>
+                    <option value="Administrateur">Administrateur</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setIsEditUserModalOpen(false)}
+                  className="px-4 py-2 text-slate-300 hover:text-white"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleEditUser}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -449,7 +796,9 @@ const AdminDashboard = () => {
 const AdminStatCard = ({ title, value, icon, color, trend, trendUp }) => (
   <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700 hover:border-slate-600 transition-all duration-300">
     <div className="flex items-center justify-between mb-4">
-      <div className={`w-12 h-12 bg-gradient-to-r ${color} rounded-xl flex items-center justify-center text-white shadow-lg`}>
+      <div
+        className={`w-12 h-12 bg-gradient-to-r ${color} rounded-xl flex items-center justify-center text-white shadow-lg`}
+      >
         {icon}
       </div>
       <div className="text-right">
@@ -489,12 +838,15 @@ const MetricBar = ({ label, value, color, showValue = false }) => (
       {showValue && <span className="text-slate-400">{value}%</span>}
     </div>
     <div className="w-full bg-slate-700 rounded-full h-2">
-      <div 
+      <div
         className={`h-2 rounded-full bg-gradient-to-r ${
-          color === 'blue' ? 'from-blue-500 to-blue-400' :
-          color === 'green' ? 'from-green-500 to-green-400' :
-          color === 'purple' ? 'from-purple-500 to-purple-400' :
-          'from-gray-500 to-gray-400'
+          color === "blue"
+            ? "from-blue-500 to-blue-400"
+            : color === "green"
+            ? "from-green-500 to-green-400"
+            : color === "purple"
+            ? "from-purple-500 to-purple-400"
+            : "from-gray-500 to-gray-400"
         }`}
         style={{ width: `${value}%` }}
       ></div>
@@ -503,7 +855,9 @@ const MetricBar = ({ label, value, color, showValue = false }) => (
 );
 
 const ActionButton = ({ icon, text, color }) => (
-  <button className={`w-full ${color} text-white p-3 rounded-xl font-medium transition-all duration-200 flex items-center space-x-3 hover:scale-105 hover:shadow-lg`}>
+  <button
+    className={`w-full ${color} text-white p-3 rounded-xl font-medium transition-all duration-200 flex items-center space-x-3 hover:scale-105 hover:shadow-lg`}
+  >
     {icon}
     <span>{text}</span>
   </button>

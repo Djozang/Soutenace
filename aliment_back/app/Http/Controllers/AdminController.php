@@ -54,6 +54,80 @@ class AdminController extends Controller
         return response()->json($activities);
     }
 
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nom' => 'required|string|max:255',
+            'email' => 'required|string|email|unique:users,email',
+            'password' => 'required|string|min:6|confirmed',
+            'role' => 'required|in:patient,admin,nutritionniste',
+        ]);
+        $user = User::create([
+            'nom' => $request->nom,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role' => $request->role,
+        ]);
+        if ($request->role === 'patient') {
+            Patient::create(['user_id' => $user->id]);
+        } elseif ($request->role === 'nutritionniste') {
+            Nutritionniste::create(['user_id' => $user->id]);
+        } elseif ($request->role === 'admin') {
+            Admin::create(['user_id' => $user->id]);
+        }
+        return response()->json(['message' => 'User created successfully', 'user' => $user], 201);
+       
+    }
+
+    public function show($id)
+    {
+        $user = User::with(['patient', 'nutritionniste', 'admin'])->findOrFail($id);
+
+        return response()->json($user);
+    }
+    public function edit($id)
+    {
+        // This method is not typically used in API controllers, but you can return a view if needed.
+        return response()->json(['message' => 'Edit functionality not implemented'], 405);
+    }
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $request->validate([
+            'nom' => 'required|string|max:255',
+            'email' => 'required|string|email|unique:users,email,' . $user->id,
+            'role' => 'required|in:patient,admin,nutritionniste',
+        ]);
+        $user->update([
+            'nom' => $request->nom,
+            'email' => $request->email,
+            'role' => $request->role,
+        ]);
+        if ($request->role === 'patient') {
+            Patient::updateOrCreate(['user_id' => $user->id]);
+        } elseif ($request->role === 'nutritionniste') {
+            Nutritionniste::updateOrCreate(['user_id' => $user->id]);
+        } elseif ($request->role === 'admin') {
+            Admin::updateOrCreate(['user_id' => $user->id]);
+        }
+        return response()->json(['message' => 'User updated successfully', 'user' => $user], 200);
+    }
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+        
+        // Optionally, delete related models
+        if ($user->role === 'patient') {
+            Patient::where('user_id', $user->id)->delete();
+        } elseif ($user->role === 'nutritionniste') {
+            Nutritionniste::where('user_id', $user->id)->delete();
+        } elseif ($user->role === 'admin') {
+            Admin::where('user_id', $user->id)->delete();
+        }
+
+        return response()->json(['message' => 'User deleted successfully'], 204);
+    }
    
    
     public function getSystemInfo()
